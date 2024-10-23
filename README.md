@@ -2,4 +2,4 @@
 
 ## Install packages
 ```
-pip install tensorflow opencv-python matplotlib shapely pandas
+pip install tensorflow opencv-python matplotlib shapely pandas scipy
