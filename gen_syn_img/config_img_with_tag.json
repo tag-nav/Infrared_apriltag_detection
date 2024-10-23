@@ -1,0 +1,16 @@
+{   "scales": [1, 2, 15],
+    "margins": [1, 1],
+    "focal_length": 4.5,
+    "ratio": [0.4, 1],
+    "roll": [-0.5, 0.5],
+    "pitch": [-0.5, 0.5],
+    "yaw": [0, 359],
+    "light_radius": 150,
+    "light_intensity": 0.7,
+    "ksize": 15,
+    "sigX": 0,
+    "g_noise_mean": 0,
+    "g_noise_sigma": 30,
+    "motion_blur_size": 15,
+    "reflection": 1
+}
