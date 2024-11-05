@@ -11,9 +11,14 @@ class ImageSynthesizer:
         self.height, self.width = self.image.shape[:2]
         # self.image = cv2.resize(self.image, (self.width*2, self.height*2), interpolation=cv2.INTER_NEAREST)
         # self.height, self.width = self.image.shape[:2]
-
-        self.scales = scales
-        self.margins = margins
+        # Randomize marker and size and location
+        scale1 = 1
+        scale2 = random.randint(2, 4)
+        scale3 = random.randint(scale2*2, 15)
+        self.scales = [scale1, scale2, scale3]
+        margin1 = [random.randint(0,int(scale2*8/14-1)), random.randint(0,int(scale2*8/14-1))]
+        margin2 = [random.randint(0,int(scale3*8/14-scale2)), random.randint(0,int(scale3*8/14-scale2))]
+        self.margins = [margin1, margin2]
         self.focal_length = focal_length
         self.min_ratio = ratio[0]
         self.max_ratio = ratio[1]
@@ -36,78 +41,40 @@ class ImageSynthesizer:
         s_outer = 14
         s_inner = 8
         im_out = np.zeros((self.scales[2]*s_outer,self.scales[2]*s_outer,4),dtype=np.uint8)
-        num_tag = random.randint(0, 8)
-        tag_location = ['outer']
-        selection = ['tl', 'tl_inner', 'tr', 'tr_inner', 'br', 'br_inner', 'bl', 'bl_inner']
 
-        if num_tag > 0:
-            selected_tags = random.sample(selection, num_tag)
-            for inner_tag in ['tl_inner', 'tr_inner', 'br_inner', 'bl_inner']:
-                base_tag = inner_tag.split('_')[0] 
-                if inner_tag in selected_tags and base_tag not in selected_tags:
-                    selected_tags.append(base_tag)
-                    num_tag += 1
-            tag_location += selected_tags
-        tag_location.sort(key=lambda x: '_inner' in x)
-
-        IDs = random.sample(range(50), num_tag+1)
+        IDs = random.sample(range(50), 3)
         imgs = []
         for id in IDs:
             im = cv2.imread(f"TagCustom52h12/tag52_12_{id:05d}.png", cv2.IMREAD_UNCHANGED)
             imgs.append(im)
-        
+
         x_coords = {}
         y_coords = {}
         d = s_outer*self.scales[2]
         tag_size = d
+        
+        # outer marker
         im_out[0:d,0:d] = cv2.resize(imgs[0], None, fx=self.scales[2], fy=self.scales[2], interpolation=cv2.INTER_NEAREST)
         corner_dict = {IDs[0]:[[0, 0], [1, 0], [1, 1], [0, 1]]}
-        for i, tag_loc in enumerate(tag_location):
-            if tag_loc == 'tl':
-                d = s_outer*self.scales[1]
-                x = self.scales[2]*(int((s_outer-s_inner)/2))+self.scales[1]*(self.margins[0])
-                y = self.scales[2]*(int((s_outer-s_inner)/2))+self.scales[1]*(self.margins[1])
-                x_coords[f'x_{tag_loc}'] = int(x)
-                y_coords[f'y_{tag_loc}'] = int(y)
-                im_out[y:y+d,x:x+d] = cv2.resize(imgs[i], None, fx=self.scales[1], fy=self.scales[1], interpolation=cv2.INTER_NEAREST)
-                x_norm, y_norm, d_norm = x/tag_size, y/tag_size, d/tag_size
-                corner_dict[IDs[i]] = [[x_norm, y_norm], [x_norm+d_norm, y_norm], [x_norm+d_norm, y_norm+d_norm], [x_norm, y_norm+d_norm]]
-            if tag_loc == 'tr':
-                d = s_outer*self.scales[1]
-                x = self.scales[2]*(int(s_inner + (s_outer-s_inner)/2))-d-self.scales[1]*(self.margins[0])
-                y = self.scales[2]*(int((s_outer-s_inner)/2))+self.scales[1]*(self.margins[1])
-                x_coords[f'x_{tag_loc}'] = int(x)
-                y_coords[f'y_{tag_loc}'] = int(y)
-                im_out[y:y+d,x:x+d] = cv2.resize(imgs[i], None, fx=self.scales[1], fy=self.scales[1], interpolation=cv2.INTER_NEAREST)
-                x_norm, y_norm, d_norm = x/tag_size, y/tag_size, d/tag_size
-                corner_dict[IDs[i]] = [[x_norm, y_norm], [x_norm+d_norm, y_norm], [x_norm+d_norm, y_norm+d_norm], [x_norm, y_norm+d_norm]]
-            if tag_loc == 'br':
-                d = s_outer*self.scales[1]
-                x = self.scales[2]*(int(s_inner + (s_outer-s_inner)/2))-d-self.scales[1]*(self.margins[0])
-                y = self.scales[2]*(int(s_inner + (s_outer-s_inner)/2))-d-self.scales[1]*(self.margins[0])
-                x_coords[f'x_{tag_loc}'] = int(x)
-                y_coords[f'y_{tag_loc}'] = int(y)
-                im_out[y:y+d,x:x+d] = cv2.resize(imgs[i], None, fx=self.scales[1], fy=self.scales[1], interpolation=cv2.INTER_NEAREST)
-                x_norm, y_norm, d_norm = x/tag_size, y/tag_size, d/tag_size
-                corner_dict[IDs[i]] = [[x_norm, y_norm], [x_norm+d_norm, y_norm], [x_norm+d_norm, y_norm+d_norm], [x_norm, y_norm+d_norm]]
-            if tag_loc == 'bl':
-                d = s_outer*self.scales[1]
-                x = self.scales[2]*(int((s_outer-s_inner)/2))+self.scales[1]*(self.margins[1])
-                y = self.scales[2]*(int(s_inner + (s_outer-s_inner)/2))-d-self.scales[1]*(self.margins[0])
-                x_coords[f'x_{tag_loc}'] = int(x)
-                y_coords[f'y_{tag_loc}'] = int(y)
-                im_out[y:y+d,x:x+d] = cv2.resize(imgs[i], None, fx=self.scales[1], fy=self.scales[1], interpolation=cv2.INTER_NEAREST)
-                x_norm, y_norm, d_norm = x/tag_size, y/tag_size, d/tag_size
-                corner_dict[IDs[i]] = [[x_norm, y_norm], [x_norm+d_norm, y_norm], [x_norm+d_norm, y_norm+d_norm], [x_norm, y_norm+d_norm]]
-            if tag_loc in ['tr_inner', 'tl_inner', 'bl_inner', 'br_inner']:
-                x = x_coords['x_'+tag_loc.split('_')[0]]
-                y = y_coords['y_'+tag_loc.split('_')[0]]
-                d = s_outer*self.scales[0]
-                x += self.scales[1]*(int((s_outer-s_inner)/2))+self.scales[0]*(self.margins[0])
-                y += self.scales[1]*(int((s_outer-s_inner)/2))+self.scales[0]*(self.margins[1])
-                im_out[y:y+d,x:x+d] = cv2.resize(imgs[i], None, fx=self.scales[0], fy=self.scales[0], interpolation=cv2.INTER_NEAREST)
-                x_norm, y_norm, d_norm = x/tag_size, y/tag_size, d/tag_size
-                corner_dict[IDs[i]] = [[x_norm, y_norm], [x_norm+d_norm, y_norm], [x_norm+d_norm, y_norm+d_norm], [x_norm, y_norm+d_norm]]
+        
+        # middle marker
+        d = s_outer*self.scales[1]
+        x = self.scales[2]*(int((s_outer-s_inner)/2))+self.scales[1]*(self.margins[0][0])
+        y = self.scales[2]*(int((s_outer-s_inner)/2))+self.scales[1]*(self.margins[0][1])
+        x_coords['x_middle'] = int(x)
+        y_coords['y_middle'] = int(y)
+        im_out[y:y+d,x:x+d] = cv2.resize(imgs[1], None, fx=self.scales[1], fy=self.scales[1], interpolation=cv2.INTER_NEAREST)
+        x_norm, y_norm, d_norm = x/tag_size, y/tag_size, d/tag_size
+        corner_dict[IDs[1]] = [[x_norm, y_norm], [x_norm+d_norm, y_norm], [x_norm+d_norm, y_norm+d_norm], [x_norm, y_norm+d_norm]]
+
+        d = s_outer*self.scales[0]
+        x += self.scales[1]*(int((s_outer-s_inner)/2))+self.scales[0]*(self.margins[1][0])
+        y += self.scales[1]*(int((s_outer-s_inner)/2))+self.scales[0]*(self.margins[1][1])
+        x = x_coords['x_inner'] = int(x)
+        y = y_coords['y_inner'] = int(y)
+        im_out[y:y+d,x:x+d] = cv2.resize(imgs[2], None, fx=self.scales[0], fy=self.scales[0], interpolation=cv2.INTER_NEAREST)
+        x_norm, y_norm, d_norm = x/tag_size, y/tag_size, d/tag_size
+        corner_dict[IDs[2]] = [[x_norm, y_norm], [x_norm+d_norm, y_norm], [x_norm+d_norm, y_norm+d_norm], [x_norm, y_norm+d_norm]]
 
         bgr = im_out[:, :, :3]  # RGB channels
         alpha = im_out[:, :, 3]  # Alpha channel
@@ -117,6 +84,7 @@ class ImageSynthesizer:
         alpha[transparent_mask] = 255
         tag = np.dstack([bgr, alpha])
         tag = cv2.cvtColor(tag, cv2.COLOR_RGB2GRAY)
+        # cv2.imwrite('tag.jpg', tag)
 
         return tag, corner_dict
             
@@ -275,8 +243,13 @@ class ImageSynthesizer:
     def is_bbox_in_bounds(self, bbox_corners):
         for x, y in bbox_corners:
             if not (0 <= x <= self.width and 0 <= y <= self.height):
-                return False  # Out of bounds
-        return True  # Fully within bounds
+                return False
+        return True  
+    
+    def is_bbox_large(self, bbox, pixels):
+        if bbox[2][0] - bbox[0][0] > pixels and bbox[2][1] - bbox[0][1] > pixels:
+            return True
+        return False  
 
     def extract_inner_corners(self, corners):
         dst_points = np.array([
