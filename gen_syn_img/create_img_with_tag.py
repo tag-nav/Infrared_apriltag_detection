@@ -174,8 +174,9 @@ class ImageSynthesizer:
             scaled_corners = np.array([scaled_corners])
             corner_dict[ID] = cv2.perspectiveTransform(scaled_corners, homography_matrix)
     
-
+        # cv2.imwrite('before_reflection.jpg', img_with_tag)
         if self.reflection == True:
+            mask_img = np.zeros_like(img_with_tag, dtype=np.uint8)
             num_black_pixels = np.sum((img_with_tag == 0) & (mask == 255))
             reflected_surface = np.where(img_with_tag <= 50)
             reflection = cv2.imread(self.refpath, cv2.IMREAD_GRAYSCALE)
@@ -192,6 +193,7 @@ class ImageSynthesizer:
             max_x = int(np.max(transformed_corners[:, 0]))
             max_y = int(np.max(transformed_corners[:, 1]))
 
+            img_before_reflection = img_with_tag.copy()
             # Randomly place reflection image near black region
             if len(reflected_surface[0]) > 0:
                 base_y, base_x = int(transformed_corners[0][1]), int(transformed_corners[0][0])
@@ -215,13 +217,14 @@ class ImageSynthesizer:
                                 if reflection_resized[y, x] >= 200: # Reflect white part of the object
                                     if img_with_tag[y, x] == 0:
                                         img_with_tag[y, x] = reflection_resized[y, x]
+                                        mask_img[y, x] = 255
                                         num_white_pixels += 1
 
                     img_with_tag = cv2.morphologyEx(img_with_tag, cv2.MORPH_CLOSE, (3,3))
                     percent = num_white_pixels / num_black_pixels * 100
 
 
-        return img_with_tag, homography_matrix, transformed_corners, corner_dict, percent
+        return img_with_tag, homography_matrix, transformed_corners, corner_dict, percent, mask_img, img_before_reflection
 
     def bounding_box(self, corners):
         # Calculate the minimum and maximum x and y coordinates

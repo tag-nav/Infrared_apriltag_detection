@@ -10,7 +10,7 @@
     "ksize": 15,
     "sigX": 0,
     "g_noise_mean": 0,
-    "g_noise_sigma": 30,
-    "motion_blur_size": 15,
+    "g_noise_sigma": 100,
+    "motion_blur_size": 50,
     "reflection": 1
 }
