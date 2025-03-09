@@ -1,0 +1,8 @@
+tensorflow ~= 2.17
+ultralytics ~= 8.3.20
+opencv-python ~= 4.10
+numpy ~= 1.26
+matplotlib ~= 3.9
+shapely ~= 2.0
+pandas ~= 2.2
+scipy ~= 1.13
