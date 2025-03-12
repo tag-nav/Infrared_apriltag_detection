@@ -7,10 +7,11 @@ import matplotlib.pyplot as plt
 
 class ImageSynthesizer:
     def __init__(self, imgpath, scales, margins, focal_length, ratio, roll, pitch, yaw, radius, intensity, ksize, sigX, mean, sigma, motion_blur_size, reflection):
-        self.image = cv2.imread(imgpath, cv2.IMREAD_GRAYSCALE)
+        self.image_ori = cv2.imread(imgpath, cv2.IMREAD_GRAYSCALE)
+        self.imgh, self.imgw = self.image_ori.shape[:2]
+        side = np.minimum(self.imgh, self.imgw)
+        self.image = self.resize(self.image_ori, side, side)
         self.height, self.width = self.image.shape[:2]
-        # self.image = cv2.resize(self.image, (self.width*2, self.height*2), interpolation=cv2.INTER_NEAREST)
-        # self.height, self.width = self.image.shape[:2]
         # Randomize marker and size and location
         scale1 = 1
         scale2 = random.randint(2, 4)
@@ -36,6 +37,20 @@ class ImageSynthesizer:
         self.reflection = reflection
         ref_idx = random.randint(0, 9)
         self.refpath = "drones/" + str(ref_idx) + ".jpg"
+
+    def resize(self, img, height, width, centerCrop=True):
+        imgh, imgw = img.shape[0:2]
+
+        if centerCrop and imgh != imgw:
+            # center crop
+            side = np.minimum(imgh, imgw)
+            j = (imgh - side) // 2
+            i = (imgw - side) // 2
+            img = img[j:j + side, i:i + side, ...]
+
+        img = cv2.resize(img, (width, height), interpolation=cv2.INTER_NEAREST)
+
+        return img
     
     def gen_nested_tag(self):
         s_outer = 14
