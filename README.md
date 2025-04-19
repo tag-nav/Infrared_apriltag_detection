@@ -1,4 +1,4 @@
-# Infrared_apriltag_detection
+# Infrared_marker_detection
 
 ## Prerequisites
 - python 3.9
