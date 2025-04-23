@@ -2,15 +2,15 @@ import random
 import numpy as np
 import cv2
 from scipy.spatial.transform import Rotation as R
-import matplotlib.pyplot as plt
-
+from skimage.feature import canny
 
 class ImageSynthesizer:
-    def __init__(self, imgpath, scales, margins, focal_length, ratio, roll, pitch, yaw, radius, intensity, ksize, sigX, mean, sigma, motion_blur_size, reflection):
-        self.image_ori = cv2.imread(imgpath, cv2.IMREAD_GRAYSCALE)
-        self.imgh, self.imgw = self.image_ori.shape[:2]
-        side = np.minimum(self.imgh, self.imgw)
-        self.image = self.resize(self.image_ori, side, side)
+    def __init__(self, imgpath, scales, margins, focal_length, ratio, roll, pitch, yaw, radius, intensity, ksize, sigX, mean, sigma, motion_blur_size, reflection, train_mode, canny_sigma, mask):
+        # self.image_ori = cv2.imread(imgpath, cv2.IMREAD_GRAYSCALE)
+        # self.imgh, self.imgw = self.image_ori.shape[:2]
+        # side = np.minimum(self.imgh, self.imgw)
+        # self.image = self.resize(self.image_ori, side, side)
+        self.image = cv2.imread(imgpath, cv2.IMREAD_GRAYSCALE)
         self.height, self.width = self.image.shape[:2]
         # Randomize marker and size and location
         scale1 = 1
@@ -37,6 +37,10 @@ class ImageSynthesizer:
         self.reflection = reflection
         ref_idx = random.randint(0, 9)
         self.refpath = "drones/" + str(ref_idx) + ".jpg"
+
+        self.train_mode = train_mode
+        self.canny_sigma = canny_sigma
+        self.mask = mask
 
     def resize(self, img, height, width, centerCrop=True):
         imgh, imgw = img.shape[0:2]
@@ -67,7 +71,7 @@ class ImageSynthesizer:
         y_coords = {}
         d = s_outer*self.scales[2]
         tag_size = d
-        
+        cv2.imwrite('single_tag.jpg', imgs[0])
         # outer marker
         im_out[0:d,0:d] = cv2.resize(imgs[0], None, fx=self.scales[2], fy=self.scales[2], interpolation=cv2.INTER_NEAREST)
         corner_dict = {IDs[0]:[[0, 0], [1, 0], [1, 1], [0, 1]]}
@@ -99,12 +103,25 @@ class ImageSynthesizer:
         alpha[transparent_mask] = 255
         tag = np.dstack([bgr, alpha])
         tag = cv2.cvtColor(tag, cv2.COLOR_RGB2GRAY)
-        # cv2.imwrite('tag.jpg', tag)
+        
 
         return tag, corner_dict
-            
+
+    def create_canny_edge(self, img, mask):
+        mask = None if self.train_mode else (1 - mask / 255).astype(bool)
+
+        if self.canny_sigma == -1:
+            return np.zeros(img.shape).astype(np.float64)
+
+        if self.canny_sigma == 0:
+            self.canny_sigma = random.randint(1, 4)
+        
+        return canny(img, sigma=self.canny_sigma, mask=mask).astype(np.float64)
+    
+
     def create_tag(self):
         tag, corner_dict = self.gen_nested_tag()
+        cv2.imwrite('nested_tag.jpg', tag)
         min_tag_size = int(np.min([self.height, self.width])*self.min_ratio)
         max_tag_size = int(np.min([self.height, self.width])*self.max_ratio)
 
@@ -188,10 +205,18 @@ class ImageSynthesizer:
             scaled_corners = np.array(scaled_corners, dtype=np.float32)
             scaled_corners = np.array([scaled_corners])
             corner_dict[ID] = cv2.perspectiveTransform(scaled_corners, homography_matrix)
-    
-        # cv2.imwrite('before_reflection.jpg', img_with_tag)
+        
+        base_height, base_width = img_with_tag.shape[:2]
+        mask = cv2.resize(self.mask, (base_width, base_height), interpolation=cv2.INTER_NEAREST)
+        edge_bool = self.create_canny_edge(img_with_tag, mask)
+        edge = (edge_bool.astype(np.uint8)) * 255
+
+        black_cell = np.random.randint(0, 56)
+        white_cell = np.random.randint(200, 256)
+        reflection_cell = np.random.randint(250, 256) 
+        cv2.imwrite('before_reflection.jpg', img_with_tag)
         if self.reflection == True:
-            mask_img = np.zeros_like(img_with_tag, dtype=np.uint8)
+            reflection_img = np.zeros_like(img_with_tag, dtype=np.uint8)
             num_black_pixels = np.sum((img_with_tag == 0) & (mask == 255))
             reflected_surface = np.where(img_with_tag <= 50)
             reflection = cv2.imread(self.refpath, cv2.IMREAD_GRAYSCALE)
@@ -229,17 +254,24 @@ class ImageSynthesizer:
                     y_end = min(max_y, h_obj, self.height)
                     for x in range(x_start, x_end):
                         for y in range(y_start, y_end):
-                                if reflection_resized[y, x] >= 200: # Reflect white part of the object
-                                    if img_with_tag[y, x] == 0:
-                                        img_with_tag[y, x] = reflection_resized[y, x]
-                                        mask_img[y, x] = 255
-                                        num_white_pixels += 1
+                            if reflection_resized[y, x] >= 200: # Reflect white part of the object
+                                if img_with_tag[y, x] == 0:
+                                    img_with_tag[y, x] = reflection_resized[y, x]
+                                    reflection_img[y, x] = reflection_cell
+                                    num_white_pixels += 1
+                            if img_with_tag[y, x] == 0:
+                                img_with_tag[y, x] = black_cell
+                            if img_with_tag[y, x] == 255:
+                                img_with_tag[y, x] = white_cell
+
+
+
 
                     img_with_tag = cv2.morphologyEx(img_with_tag, cv2.MORPH_CLOSE, (3,3))
                     percent = num_white_pixels / num_black_pixels * 100
 
 
-        return img_with_tag, homography_matrix, transformed_corners, corner_dict, percent, mask_img, img_before_reflection
+        return img_with_tag, homography_matrix, transformed_corners, corner_dict, percent, reflection_img, img_before_reflection, mask, edge
 
     def bounding_box(self, corners):
         # Calculate the minimum and maximum x and y coordinates
@@ -322,6 +354,7 @@ class ImageSynthesizer:
         gauss = np.random.normal(self.mean, self.sigma, (self.height, self.width))
         gauss = gauss.reshape(self.height, self.width)
         noisy = image + gauss
+        noisy = np.clip(noisy, 0, 255).astype(np.uint8)
         return noisy
 
     def apply_motion_blur(self, image):
