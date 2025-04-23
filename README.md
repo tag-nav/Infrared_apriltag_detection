@@ -29,5 +29,7 @@ Download [Open Images](https://storage.googleapis.com/openimages/web/index.html)
 
 ### Overlay markers onto the downloaded images
 
-To generate synthetic dataset, run the notebook [gen_syn_data.ipynb](https://github.com/tag-nav/infrared_marker_detection/blob/main/gen_syn_img/gen_syn_data.ipynb) to generate synthetic images. Parameters for noise effects and marker placement can be configured in [config_img_with_tag.json](https://github.com/tag-nav/infrared_marker_detection/blob/main/gen_syn_img/config_img_with_tag.json).
+To generate synthetic dataset, run the notebook [gen_syn_data.ipynb](https://github.com/tag-nav/infrared_marker_detection/blob/main/gen_syn_img/gen_syn_data.ipynb). Parameters for noise effects and marker placement can be configured in [config_img_with_tag.json](https://github.com/tag-nav/infrared_marker_detection/blob/main/gen_syn_img/config_img_with_tag.json).
+
+
 
